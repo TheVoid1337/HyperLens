@@ -12,18 +12,8 @@ def load_config(config_path="config/vae_train_params.json"):
         return json.load(f)
 
 
-
-
-
-
 if __name__ == '__main__':
-    config = load_config()
-
-    components = [
-        ManifoldComponent(manifold_type='euclidean', dimension=64),
-        ManifoldComponent(manifold_type='hyperbolic', dimension=128, curvature=1.0),
-        ManifoldComponent(manifold_type='spherical', dimension=64)
-    ]
+    config = load_config("config/vae_train_params_phase_2.json")
 
     # TODO add to model
     channels_list, depth_list = generate_stage_configurations(**config["stage_configurations"])

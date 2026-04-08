@@ -1,8 +1,5 @@
 
 
-
-
-
 def generate_stage_configurations(hidden_channels: int, number_of_layers: int, double_steps: int, plateau_size: int,
                                   max_channels: int = None) -> tuple[list[int], list[int]]:
     channel_list = []

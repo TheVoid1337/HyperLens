@@ -20,6 +20,7 @@ class DINOV2PerceptualLoss(nn.Module):
 
         self.transform = transform.Compose([
             transform.Resize((image_size, image_size), antialias=True),
+            #  transform.Lambda(lambda x: (x + 1.0) / 2.0), use if necessary
             transform.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
         ])
 
@@ -28,6 +29,7 @@ class DINOV2PerceptualLoss(nn.Module):
         self.blocks_to_take = [2, 5, 8, 11]
 
     def forward(self, recon_images, real_images):
+
         recon_dino = self.transform(recon_images)
         real_dino = self.transform(real_images)
 

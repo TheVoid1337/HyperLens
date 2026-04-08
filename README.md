@@ -46,3 +46,24 @@ $$
 $$
 
 This yields a single-step mapping from the base distribution to the data manifold without numerical integration.
+
+### Validation Results for VAE Reconstructions ImageNet-1K on different Image sizes and Training Phases and last 2 layers not frozen during training phase 2
+| Training Phase | Image Size | FID Score | SSIM Score | PSNR Score |
+|----------------|------------|-----------|------------|------------|
+| Phase 1        | 256x256    | 2.71      | 0.85       | 30.20 dB   |
+| Phase 1        | 512x512    | 0.56      | 0.87       | 31.57 dB   |
+| Phase 2        | 256x256    | 11.84     | 0.86       | 30.55 dB   |
+| Phase 2        | 512x512    | 0.83      | 0.88       | 32.25 dB   |
+| Phase 3        | 256x256    | 2.71      | 0.85       | 30.20 dB   |
+| Phase 3        | 512x512    | 0.00      | 0.00       | 31.54 dB   |
+
+
+
+
+### Validation Results for VAE Reconstructions ImageNet-1K
+| Image Size | FID Score | SSIM Score | PSNR Score |
+|------------|-----------|------------|------------|
+| 256x256    | 6.48      | 0.8519     | 29.89 dB   |
+| 512x512    | 0.75      | 0.8693     | 31.54 dB   |
+
+

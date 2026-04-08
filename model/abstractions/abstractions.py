@@ -37,7 +37,6 @@ class BaseManifoldWrapper:
 class HyperLensVAEModelParams:
     image_channels: int = 3
     hidden_channels: int = 32
-    latent_channels: int = 16
     number_of_layers: int = 4
     number_of_heads: int = 8
     head_dimension: int = 16

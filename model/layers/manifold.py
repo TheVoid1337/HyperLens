@@ -91,3 +91,6 @@ class HyperbolicPoincareManifold(BaseManifoldWrapper):
 
     def distance(self, x:Tensor, y:Tensor)-> Tensor:
         return self.manifold.dist(x, y)
+
+    def transport_0(self, x:Tensor, u:Tensor) -> Tensor:
+        return self.manifold.transp0(x, u)

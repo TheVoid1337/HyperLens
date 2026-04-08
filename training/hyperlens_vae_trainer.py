@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from torch.optim import Adam, AdamW
 from tqdm import tqdm
 
-from loss import DINOV2PerceptualLoss, KLDivergenceLoss
+from loss import DINOV2PerceptualLoss, KLDivergenceLoss, LatentConsistencyLoss
 from model import HyperLensDCVAE, HyperLensDCVAEOutput
 from torch.nn import MSELoss, L1Loss
 
@@ -31,6 +31,7 @@ class HyperLensVAEDCTrainerParams:
     image_save_path: str = "images/"
     phase_training: str = "phase_1" # "phase_1" or "phase_2"
     save_recons_every_steps = 1000
+    lambda_consistency: float = 0.01
 
 
 class HyperLensVAEDCTrainer:
@@ -53,6 +54,8 @@ class HyperLensVAEDCTrainer:
         self.latent_loss_fn = params.kl_loss() if params.kl_loss else None
         self.perceptual_loss_fn = params.perceptual_loss(image_size=224) if params.perceptual_loss else None
         self.scaler = torch.amp.GradScaler()
+        self.consistency_loss_fn = LatentConsistencyLoss()
+        self.lambda_consistency = params.lambda_consistency
 
         self.phase_training = params.phase_training
         self.save_recons_every_steps = params.save_recons_every_steps
@@ -85,16 +88,32 @@ class HyperLensVAEDCTrainer:
 
         active_params_names = []
 
-        if phase == "phase_1":
+        if phase == "phase_1" or phase == "phase_1_2":
             for name, param in self.model.named_parameters():
                 param.requires_grad = True
                 active_params_names.append(name)
             print("[*] All layers are active!")
 
         elif phase == "phase_2":
-            phase2_layers = ['decoder.norm_out', 'decoder.output_conv']
+            encoder_layers = ['encoder.output_norm', 'encoder.output_conv']
             for name, param in self.model.named_parameters():
-                if any(layer in name for layer in phase2_layers):
+                if any(layer in name for layer in encoder_layers):
+                    param.requires_grad = True
+                    active_params_names.append(name)
+
+            for idx in range(len(self.model.encoder.encoder) - 2, len(self.model.encoder.encoder)):
+                for name, param in self.model.encoder.encoder[idx].named_parameters():
+                    param.requires_grad = True
+                    active_params_names.append(f"encoder.encoder.{idx}.{name}")
+
+            for name, param in self.model.decoder.named_parameters():
+                param.requires_grad = True
+                active_params_names.append(name)
+
+        elif phase == "phase_3":
+            phase3_layers = ['decoder.norm_out', 'decoder.output_conv']
+            for name, param in self.model.named_parameters():
+                if any(layer in name for layer in phase3_layers):
                     param.requires_grad = True
                     active_params_names.append(name)
 
@@ -139,7 +158,7 @@ class HyperLensVAEDCTrainer:
         kl_loss = torch.tensor(0.0, device=self.device)
         perceptual_loss = torch.tensor(0.0, device=self.device)
 
-        if self.latent_loss_fn and not self.phase_training == "phase_2":
+        if self.latent_loss_fn and not self.phase_training == "phase_3":
             kl_loss = self.latent_loss_fn(model_output.tangent_means, model_output.tangent_log_vars)
 
         if self.perceptual_loss_fn:
@@ -147,13 +166,20 @@ class HyperLensVAEDCTrainer:
 
         return recon_loss, kl_loss, perceptual_loss
 
+    def calculate_consistency_loss(self, real_means, real_log_vars, fake_means, fake_log_vars):
+
+        consistency_loss = self.consistency_loss_fn(real_means, real_log_vars, fake_means, fake_log_vars)
+        return consistency_loss
+
+
     def train(self, dataloader):
         if not os.path.exists(self.save_path):
             os.makedirs(self.save_path, exist_ok=True)
         if not os.path.exists(self.params.image_save_path):
             os.makedirs(self.params.image_save_path, exist_ok=True)
 
-        avg_loss, log_loss, log_recon, log_kl, log_percept = 0.0, 0.0, 0.0, 0.0, 0.0
+        avg_loss, log_loss, log_recon, log_kl, log_percept, log_consistency = 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
+        consistency_loss = torch.tensor(0.0, device=self.device)
 
         start_step, best_loss = self.load_model(os.path.join(self.save_path, self.model_filename))
         self.setup_training_phase()
@@ -176,10 +202,27 @@ class HyperLensVAEDCTrainer:
             with torch.autocast(device_type=self.device, dtype=torch.float16):
                 output = self.compiled_model(images)
 
+
                 recon_loss, kl_loss, perceptual_loss = self.calculate_loss(images, output)
 
+                if self.phase_training == "phase_1_2" and step >= self.params.total_steps - 10_000:
 
-                loss = (recon_loss + self.params.beta_perceptual * perceptual_loss + self.params.gamma_kl * kl_loss)
+                    encoder_params = self.model.encoder.parameters()
+                    for param in encoder_params:
+                        param.requires_grad = False
+
+                    real_means, real_log_vars = output.tangent_means, output.tangent_log_vars
+                    fake_encoded = self.model.encode(output.reconstructed_image)
+                    fake_means, fake_log_vars = fake_encoded.tangent_means, fake_encoded.tangent_log_vars
+                    consistency_loss = self.calculate_consistency_loss(real_means, real_log_vars,
+                                                                       fake_means, fake_log_vars)
+
+                    for param in encoder_params:
+                        param.requires_grad = True
+
+
+                loss = (recon_loss + self.params.beta_perceptual * perceptual_loss
+                        + self.params.gamma_kl * kl_loss + self.lambda_consistency * consistency_loss)
 
 
             self.scaler.scale(loss).backward()
@@ -191,6 +234,7 @@ class HyperLensVAEDCTrainer:
             log_recon += recon_loss.item()
             log_kl += kl_loss.item()
             log_percept += perceptual_loss.item()
+            log_consistency += consistency_loss.item()
 
             if (step + 1) % self.log_every_steps == 0:
                 avg_loss = log_loss / self.log_every_steps
@@ -198,9 +242,10 @@ class HyperLensVAEDCTrainer:
                     'Loss': f"{avg_loss:.4f}",
                     'Recon': f"{log_recon / self.log_every_steps:.4f}",
                     'DINO': f"{log_percept / self.log_every_steps:.4f}",
-                    'KL': f"{log_kl / self.log_every_steps:.4f}"
+                    'KL': f"{log_kl / self.log_every_steps:.4f}",
+                    'Consistency': f"{log_consistency / self.log_every_steps}"
                 })
-                log_loss, log_recon, log_kl, log_percept = 0, 0, 0, 0
+                log_loss, log_recon, log_kl, log_percept, log_consistency = 0, 0, 0, 0, 0
 
             if (step + 1) % self.save_every_steps == 0:
                 print(f"\n[Step {step + 1}] Saving Checkpoint...")

@@ -91,7 +91,7 @@ class HyperLensDCVAEDecoder(HyperLensDCVAEAbstractDecoder):
 
     def forward(self, latent_vector_cat: Tensor) -> HyperLensDCVAEDecoderOutput:
 
-        z_flat_concat = self._map_from_manifolds(latent_vector_cat)
+        z_flat_concat = self._map_from_manifold(latent_vector_cat)
 
         x = self.pre_conv(z_flat_concat)
 
