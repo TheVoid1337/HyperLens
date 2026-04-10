@@ -30,7 +30,7 @@ class HyperLensVAEDCTrainerParams:
     model_filename: str = "hyperlens_vae_model.pth"
     image_save_path: str = "images/"
     phase_training: str = "phase_1" # "phase_1" or "phase_2"
-    save_recons_every_steps = 1000
+    save_recons_every_steps = 10000
     lambda_consistency: float = 0.01
 
 
@@ -95,16 +95,16 @@ class HyperLensVAEDCTrainer:
             print("[*] All layers are active!")
 
         elif phase == "phase_2":
-            encoder_layers = ['encoder.output_norm', 'encoder.output_conv']
-            for name, param in self.model.named_parameters():
-                if any(layer in name for layer in encoder_layers):
-                    param.requires_grad = True
-                    active_params_names.append(name)
-
-            for idx in range(len(self.model.encoder.encoder) - 2, len(self.model.encoder.encoder)):
-                for name, param in self.model.encoder.encoder[idx].named_parameters():
-                    param.requires_grad = True
-                    active_params_names.append(f"encoder.encoder.{idx}.{name}")
+            # encoder_layers = ['encoder.output_norm', 'encoder.output_conv']
+            # for name, param in self.model.named_parameters():
+            #     if any(layer in name for layer in encoder_layers):
+            #         param.requires_grad = True
+            #         active_params_names.append(name)
+            #
+            # for idx in range(len(self.model.encoder.encoder) - 2, len(self.model.encoder.encoder)):
+            #     for name, param in self.model.encoder.encoder[idx].named_parameters():
+            #         param.requires_grad = True
+            #         active_params_names.append(f"encoder.encoder.{idx}.{name}")
 
             for name, param in self.model.decoder.named_parameters():
                 param.requires_grad = True
@@ -142,6 +142,7 @@ class HyperLensVAEDCTrainer:
             self.model.load_state_dict(checkpoint['model_state_dict'])
             step = checkpoint.get('step', 0)
             loss = checkpoint.get('loss', 0.0)
+            print(f"Model successfully loaded! (Resuming from Step {step}, Loss: {loss:.4f})")
         else:
             print(f"No checkpoint found at {path}. Starting from scratch.")
             step = 0
@@ -150,7 +151,6 @@ class HyperLensVAEDCTrainer:
         print("Compiling model...")
         self.compiled_model = torch.compile(model=self.model, mode="default")
         self.visualizer = VAETrainPlotter(self.compiled_model, self.device)
-        print(f"Model successfully loaded! (Resuming from Step {step}, Loss: {loss:.4f})")
         return step, loss
 
     def calculate_loss(self, real_images, model_output: HyperLensDCVAEOutput):

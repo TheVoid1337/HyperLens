@@ -54,8 +54,19 @@ This yields a single-step mapping from the base distribution to the data manifol
 | Phase 1        | 512x512    | 0.56      | 0.87       | 31.57 dB   |
 | Phase 2        | 256x256    | 11.84     | 0.86       | 30.55 dB   |
 | Phase 2        | 512x512    | 0.83      | 0.88       | 32.25 dB   |
-| Phase 3        | 256x256    | 2.71      | 0.85       | 30.20 dB   |
-| Phase 3        | 512x512    | 0.00      | 0.00       | 31.54 dB   |
+| Phase 3        | 256x256    | 5.84      | 0.86       | 30.34 dB   |
+| Phase 3        | 512x512    | 0.62      | 0.87       | 31.87 dB   |
+
+
+### Validation Results for VAE Reconstructions ImageNet-1K on different Image sizes and Training Phases and frozen latents during training phase 2
+| Training Phase | Image Size | FID Score | SSIM Score | PSNR Score |
+|----------------|------------|-----------|------------|------------|
+| Phase 1        | 256x256    | 2.57      | 0.86       | 30.22 dB   |
+| Phase 1        | 512x512    | 0.38      | 0.87       | 31.64 dB   |
+| Phase 2        | 256x256    | 11.49     | 0.87       | 30.76 dB   |
+| Phase 2        | 512x512    | 0.73      | 0.88       | 32.47 dB   |
+| Phase 3        | 256x256    | 5.84      | 0.86       | 30.34 dB   |
+| Phase 3        | 512x512    | 0.62      | 0.87       | 31.87 dB   |
 
 
 
