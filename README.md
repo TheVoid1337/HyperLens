@@ -31,9 +31,9 @@ Geodesic evolution is performed independently per component using the exponentia
 $$
 x_1 = \mathrm{Exp}_{x_0}(v)
 = \left(
-\operatorname{Exp}_{x^{\mathbb{E}}}(v^{\mathbb{E}}),
-\operatorname{Exp}_{x^{\mathbb{H}}}(v^{\mathbb{H}}),
-\operatorname{Exp}_{x^{\mathbb{S}}}(v^{\mathbb{S}})
+\mathrm{Exp}_{x^{\mathbb{E}}}(v^{\mathbb{E}}),
+\mathrm{Exp}_{x^{\mathbb{H}}}(v^{\mathbb{H}}),
+\mathrm{Exp}_{x^{\mathbb{S}}}(v^{\mathbb{S}})
 \right)
 $$
 
