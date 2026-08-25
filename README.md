@@ -29,7 +29,7 @@ $$
 Geodesic evolution is performed independently per component using the exponential map
 
 $$
-x_1 = \operatorname{Exp}_{x_0}(v)
+x_1 = \mathrm{Exp}_{x_0}(v)
 = \left(
 \operatorname{Exp}_{x^{\mathbb{E}}}(v^{\mathbb{E}}),
 \operatorname{Exp}_{x^{\mathbb{H}}}(v^{\mathbb{H}}),
